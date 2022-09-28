@@ -1,11 +1,17 @@
 use std::io;
 use std::io::Write;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 use serde::{Deserialize, Serialize};
 use reqwest;
 use clap::Parser;
 
-static PREAMBLE: &str = "This is a conversation between a {language} tutor and a {language} learner. The tutor will correct any mistakes in the students grammar.\n\n\n";
+lazy_static! {
+    static ref PREAMBLES: HashMap<&'static str, &'static str> = HashMap::from(
+        include!("preamble.list")
+    );
+}
 static INTERACTION_PROMPT: &str = "S: {question}\nT:";
 static INTERACTION: &str = "S: {question}\nT: {response}\n\n";
 const MAX_TOKENS: usize = 256;
@@ -13,7 +19,7 @@ const MAX_TOKENS: usize = 256;
 #[derive(Parser)]
 struct Cli {
     token: String,
-    #[clap(default_value_t = String::from("Mandarin Chinese"))]
+    #[clap(default_value_t = String::from("zh"))]
     language: String,
 }
 
@@ -71,7 +77,8 @@ impl Conversation {
     }
 
     pub fn ask(&self, question: &str, context: usize) -> GptRequest {
-        let mut request = String::from(PREAMBLE).replace("{language}", &self.language);
+        let mut request = PREAMBLES[self.language.as_str()].to_string();
+        request.push_str("\n\n\n");
         for interaction in self.interactions.iter().rev().take(context).rev() {
             request.push_str(&interaction.to_string());
         }
@@ -94,7 +101,12 @@ async fn main() {
 
     let mut conversation = Conversation::new(cli.language);
 
-    print!("{}", String::from(PREAMBLE).replace("{language}", &conversation.language));
+    if PREAMBLES.get(conversation.language.as_str()).is_none() {
+        println!("Unsupported language!");
+        return;
+    }
+
+    print!("{}\n\n", PREAMBLES[conversation.language.as_str()]);
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();

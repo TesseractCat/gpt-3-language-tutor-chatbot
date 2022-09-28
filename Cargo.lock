@@ -3,10 +3,11 @@
 version = 3
 
 [[package]]
-name = "Tutor-bot"
+name = "GPT-3LanguageTutorChatbot"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
